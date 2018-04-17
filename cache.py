@@ -1,13 +1,10 @@
 import queue
 
-CAPACITY = 100
-
-class Page:
-    def __init__(self, priority, url, html):
+class Key:
+    def __init__(self, priority, url):
         self.priority = priority
         self.id = url
-        self.contents = html
-        
+
     def __cmp__(self, other):
         return cmp(self.priority, other.priority)
 
@@ -23,16 +20,13 @@ class Page:
     def get_id(self):
         return self.id
 
-    def get_contents(self):
-        return self.contents
-
 class Cache:
-    def __init__(self) :
-        self.capacity = CAPACITY
+    def __init__(self, capacity) :
+        self.capacity = capacity
         self.size = 0
         self.rank = 0
-        # self.cache = CAPACITY * [None]     # this should probs be changed to a queue??
-        self.cache = queue.PriorityQueue(maxsize=CAPACITY)
+        self.keyQueue = queue.PriorityQueue(maxsize=capacity)
+        self.cache = {}
 
     def print(self):
         print("Cache Contents:")
@@ -40,47 +34,67 @@ class Cache:
             print("Empty")
 
         else:
-            newq = queue.PriorityQueue(maxsize=CAPACITY)
-            # print(self.size)
+            print("Size: %d elements" % (self.size,))
+            newq = queue.PriorityQueue(maxsize=self.capacity)
             for i in range (0, self.size):
-                p = self.cache.get()
-                print("%d) %s --> %s" % (p.get_priority(), p.get_id(), p.get_contents()))
-                # print("%d) %s --> %s" % (i + 1, self.cache[i]["id"], self.cache[i]["contents"]))
-                newq.put(p)
+                k = self.keyQueue.get()
+                html = self.cache[k.get_id()]
+                print("%d) %s --> %s" % (k.get_priority(), k.get_id(), html))
+                newq.put(k)
 
-            self.cache = newq
+            self.keyQueue = newq
 
     def add(self, url, html):
+        inCache = self.cache.get(url, None)
 
-        # Check if in existing cache
-        newq = queue.PriorityQueue(maxsize=CAPACITY)
-        found = False
-
-        for i in range(0, self.size):
-            p = self.cache.get()
-            if p.id == url and p.contents == html:
-                found = True
-                p.priority = self.rank
-            newq.put(p)
-        
-        self.cache = newq
-
-        # If not found, add
-        if not found:
-            if (self.size == self.capacity):
-                self.cache.get()
+        # Not in cache 
+        if inCache is None:
+            # if cache is full, remove something
+            if self.size == self.capacity:
+                oldKey = self.keyQueue.get()
+                self.cache.pop(oldKey.get_id())
                 self.size -= 1
-            self.cache.put(Page(self.rank, url, html))
+
+            # add url/html to cache
+            self.cache[url] = html
             self.size += 1
 
-        self.rank += 1
-        
+            # add url to end of queue
+            self.keyQueue.put(Key(self.rank, url))
+            self.rank += 1
+
+        else:
+            # move url location on queue
+            newq = queue.PriorityQueue(maxsize=self.capacity)
+
+            for i in range(0, self.size):
+                k = self.keyQueue.get()
+                if k.get_id() == url and self.cache[url] == html:
+                    k.priority = self.rank
+                newq.put(k)
+            
+            self.keyQueue = newq
+            self.rank += 1
+
+
+    def clear(self):
+        self.cache = {}
+        self.keyQueue = queue.PriorityQueue(maxsize=self.capacity)
+        self.size = 0
+        self.rank = 0
+
+    # Returns page if found in cache, or None
+    def get(self, url):
+        return self.cache.get(url, None)        
+
 
 def test():
-    c = Cache()
+    test_cap = 100
+    c = Cache(test_cap)
 
-    for i in range(0, CAPACITY):
+    for i in range(0, test_cap):
         c.add(str(i), "<html>" + str(i) + "</html>")
+    c.print()
 
     c.add(str(i + 1), "this should be at the back, cache should start @1")
     c.print()
@@ -88,9 +102,22 @@ def test():
     c.add(str(2), "<html>" + str(2) + "</html>")
     c.print()
 
+    if (c.get("2") != "<html>2</html>"):
+        print("FAILED TEST")
+        return
 
-# def main():
-#     # test()
+    c.clear()
+    c.print()
+
+    if (c.get("2") != None):
+        print("FAILED TEST")
+        return
+
+    print("PASSED (...probably)")
 
 
-# main()
+def main():
+    test()
+
+
+main()
