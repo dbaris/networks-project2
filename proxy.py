@@ -88,7 +88,7 @@ class Proxy :
             while 1:
                 data = s.recv(config['MAX_LEN'])         # receive data from web server
                 if (len(data) > 0):
-                    print("data : ", data.decode())
+                    # print("data : ", data.decode())
                     conn.send(data)                      # send to browser
                 else:
                     break

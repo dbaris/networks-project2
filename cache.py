@@ -64,39 +64,6 @@ class Cache:
         return self.cache.get(url, None)        
 
 
-class LRU_Cache(Cache):
-    def add(self, url, html):
-        inCache = self.cache.get(url, None)
-
-        # Not in cache 
-        if inCache is None:
-            # if cache is full, remove something
-            if self.size == self.capacity:
-                oldKey = self.keyQueue.get()
-                self.cache.pop(oldKey.get_id())
-                self.size -= 1
-
-            # add url/html to cache
-            self.cache[url] = html
-            self.size += 1
-
-            # add url to end of queue
-            self.keyQueue.put(Key(self.rank, url))
-            self.rank += 1
-
-        else:
-            # move url location on queue
-            newq = queue.PriorityQueue(maxsize=self.capacity)
-
-            for i in range(0, self.size):
-                k = self.keyQueue.get()
-                if k.get_id() == url and self.cache[url] == html:
-                    k.priority = self.rank
-                newq.put(k)
-            
-            self.keyQueue = newq
-            self.rank += 1
-
 class LFU_Cache(Cache):
     def add(self, url, html):
         inCache = self.cache.get(url, None)
@@ -128,6 +95,39 @@ class LFU_Cache(Cache):
             
             self.keyQueue = newq
  
+
+# class LRU_Cache(Cache):
+#     def add(self, url, html):
+#         inCache = self.cache.get(url, None)
+
+#         # Not in cache 
+#         if inCache is None:
+#             # if cache is full, remove something
+#             if self.size == self.capacity:
+#                 oldKey = self.keyQueue.get()
+#                 self.cache.pop(oldKey.get_id())
+#                 self.size -= 1
+
+#             # add url/html to cache
+#             self.cache[url] = html
+#             self.size += 1
+
+#             # add url to end of queue
+#             self.keyQueue.put(Key(self.rank, url))
+#             self.rank += 1
+
+#         else:
+#             # move url location on queue
+#             newq = queue.PriorityQueue(maxsize=self.capacity)
+
+#             for i in range(0, self.size):
+#                 k = self.keyQueue.get()
+#                 if k.get_id() == url and self.cache[url] == html:
+#                     k.priority = self.rank
+#                 newq.put(k)
+            
+#             self.keyQueue = newq
+#             self.rank += 1
 
 def test():
     test_cap = 5
