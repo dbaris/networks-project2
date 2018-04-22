@@ -27,27 +27,40 @@ class Proxy :
         while True:
             (cli_sock, cli_addr) = self.serverSocket.accept()
             print("eyo")
-            process = threading.Thread(name=self._getClientName(cli_addr), target=self.start_thread, args=(cli_sock, cli_addr))
+            process = threading.Thread(name=self._get_name(cli_addr), target=self.start_thread, args=(cli_sock, cli_addr))
             process.setDaemon(True)
             process.start()
             print("hiiii")
         self.shutdown(0,0)
         print("leaving")
 
-    def parse_request (request) :
-        first_line = request.split('\n')[0]
+    def start_thread(self, conn, client_addr):
+        """
+        *******************************************
+        *********** PROXY_THREAD FUNC *************
+          A thread to handle request from browser
+        *******************************************
+        """
+
+        request = conn.recv(config['MAX_LEN'])        # get the request from browser
+        request = request.decode()
+        first_line = request.split('\n')[0]                   # parse the first line
         print("first line: ", first_line)
-        url = first_line.split(' ')[1]
+
+        url = first_line.split(' ')[1]                        # get url
         print("url: ", url)
 
-        http_pos = url.find("://")
+
+        # find the webserver and port
+        http_pos = url.find("://")          # find pos of ://
         if (http_pos==-1):
             temp = url
         else:
-            temp = url[(http_pos+3):]
+            temp = url[(http_pos+3):]       # get the rest of url
 
-        port_pos = temp.find(":") 
+        port_pos = temp.find(":")           # find the port pos (if any)
 
+        # find end of web server
         webserver_pos = temp.find("/")
         if webserver_pos == -1:
             webserver_pos = len(temp)
@@ -63,34 +76,88 @@ class Proxy :
 
         print("webserver: ", webserver)
         print("port: ", port)
-
-        return webserver, port, url
-
-    def start_thread(self, conn, client_addr) : 
-        request = conn.recv(config['MAX_LEN'])
-        print("request: ", request)
-        webserver, port, url = parse_request(request)
-
+        
         try:
+            # create a socket to connect to the web server
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.settimeout(config['TIMEOUT'])
             s.connect((webserver, port))
-            s.sendall(request)                           
+            request = request.encode()
+            s.sendall(request)                           # send request to webserver
 
             while 1:
-                data = s.recv(config['MAX_LEN'])          # receive data from web server
+                data = s.recv(config['MAX_LEN'])         # receive data from web server
                 if (len(data) > 0):
-                    conn.send(data)                               # send to browser
+                    print("data : ", data.decode())
+                    conn.send(data)                      # send to browser
                 else:
                     break
             s.close()
             conn.close()
         except socket.error as error_msg:
-            print ("ERROR: ", client_addr, error_msg)
+            print ("ERROR: ",client_addr,error_msg)
             if s:
                 s.close()
             if conn:
                 conn.close()
+
+    # def _parse_request (request) :
+    #     first_line = request.split('\n')[0]
+    #     print("first line: ", first_line)
+    #     url = first_line.split(' ')[1]
+    #     print("url: ", url)
+
+    #     http_pos = url.find("://")
+    #     if (http_pos==-1):
+    #         temp = url
+    #     else:
+    #         temp = url[(http_pos+3):]
+
+    #     port_pos = temp.find(":") 
+
+    #     webserver_pos = temp.find("/")
+    #     if webserver_pos == -1:
+    #         webserver_pos = len(temp)
+
+    #     webserver = ""
+    #     port = -1
+    #     if (port_pos==-1 or webserver_pos < port_pos):      # default port
+    #         port = 80
+    #         webserver = temp[:webserver_pos]
+    #     else:                                               # specific port
+    #         port = int((temp[(port_pos+1):])[:webserver_pos-port_pos-1])
+    #         webserver = temp[:port_pos]
+
+    #     print("webserver: ", webserver)
+    #     print("port: ", port)
+
+    #     return webserver, port, url
+
+    # def start_thread(self, conn, client_addr) : 
+    #     request = conn.recv(config['MAX_LEN'])
+    #     print("request: ", request)
+    #     webserver, port, url = _parse_request(request)
+
+    #     try:
+    #         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #         s.settimeout(config['TIMEOUT'])
+    #         s.connect((webserver, port))
+    #         s.sendall(request)                           
+
+    #         while 1:
+    #             data = s.recv(config['MAX_LEN'])          # receive data from web server
+    #             if (len(data) > 0):
+    #                 conn.send(data)                               # send to browser
+    #             else:
+    #                 break
+    #         s.close()
+    #         conn.close()
+    #     except socket.error as error_msg:
+    #         print ("ERROR: ", client_addr, error_msg)
+    #         if s:
+    #             s.close()
+    #         if conn:
+    #             conn.close()
 
     def _get_name(self, cli_addr):
         return "Client"
