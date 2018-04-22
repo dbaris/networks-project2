@@ -3,7 +3,6 @@ import threading
 import signal
 import sys
 
-
 class Proxy :
     def __init__(self, config) :
         # Shutdown on Ctrl+C
@@ -27,6 +26,7 @@ class Proxy :
         print("hello")
         while True:
             (cli_sock, cli_addr) = self.serverSocket.accept()
+            print("eyo")
             process = threading.Thread(name=self._getClientName(cli_addr), target=self.start_thread, args=(cli_sock, cli_addr))
             process.setDaemon(True)
             process.start()
@@ -107,12 +107,11 @@ if __name__ == "__main__":
         sys.exit(1);
 
     config =  {
-            "HOST" : socket.gethostname(),
+            "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
             "MAX_LEN" : 1024,
             "TIMEOUT" : 5 
         }
-    print(config["HOST"])
 
     proxy = Proxy(config)
     proxy.listen()
