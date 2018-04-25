@@ -60,53 +60,98 @@ class Proxy :
 
     def start_thread(self, client_conn, client_addr):
 
-        r = client_conn.recv(config['MAX_LEN'])        # get the request from browser
-        
+        r = client_conn.recv(config['MAX_LEN'])       
+
         request = Request(r)
 
         try : 
             if (request.command == "GET") :
-                # create a socket to connect to the web server
                 if (request.port is None) :
                     request.port = 80
                 server_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_conn.settimeout(config['TIMEOUT'])
-                server_conn.connect((request.headers['host'], request.port))
+                server_conn.connect((request.headers['host'], (int)(request.port)))
                 server_conn.sendall(r)                           
 
                 while (1) :
-                    data = server_conn.recv(config['MAX_LEN'])         # receive data from web server
+                    data = server_conn.recv(config['MAX_LEN'])         
                     if (len(data) > 0):
-                        client_conn.send(data)                      # send to browser
+                        client_conn.send(data)                      
                     else:
                         break
        
             elif (request.command == "CONNECT") : 
+                client_conn.sendall("HTTP/1.1 200 Connection established\r\n"+"Proxy-agent: Pyx\r\n"+"\r\n".encode())
+
+                print("sent established connection")
+                # setup HTTPS connection to server for client
+                server_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                
                 if (request.port is None) :
                     request.port = 443
-                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-                context.verify_mode = ssl.CERT_NONE
-                context.check_hostname = False
-
-                server_conn = context.wrap_socket(socket.socket(socket.AF_INET), server_hostname=request.address_string())
-                server_conn.settimeout(config['TIMEOUT'])
-                # server_conn.connect((request.host, 443))
-                server_conn.connect((request.headers['host'], request.port))
-                # newrequest = "GET "+url+" HTTP/1.1\r\n"+"Host: "+webserver+"\r\n"+"Connection: close\r\n"+"\r\n"
-                # print("request: ", request)
-
-                # request = request.encode()
-                print("request: ", r.decode())
-                server_conn.sendall(r)
                 
-                resp = ""
+                print("but actually here")
+                
+                ss = ssl.wrap_socket(server_conn, ssl_version=ssl.PROTOCOL_TLSv1)
+                
+                print("host:",request.headers['host'])
+                
+                addr = (request.headers['host'], (int)(request.port))
+                # addr = ('www.google.com', 443)
+                ss.connect(addr)
+                # server_conn.connect((request.headers['host'], int(request.port)))
+
+                print("connection established")
+                # data = 'GET / HTTP/1.0\r\n\r\n'.encode()
+                data = client_conn.recv(1024)
+                print("data recieved ")
+
+                ss.send(data)
+                print("data sent")
                 while (1) :
-                    temp = server_conn.recv(config['MAX_LEN']).decode()
-                    if (not temp):
+                    data = ss.recv(config['MAX_LEN'])         
+                    if (len(data) > 0):
+                        client_conn.send(data)
+                        print ("senttttt")                      
+                    else:
                         break
-                    resp += temp
-                print("resp: ", resp)
-                client_conn.sendall(resp.encode())
+       
+
+
+
+
+
+                # if (request.port is None) :
+                #     request.port = 443
+                # context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+                # context.verify_mode = ssl.CERT_NONE
+                # context.check_hostname = False
+
+                # server_conn = context.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+                # server_conn.settimeout(config['TIMEOUT'])
+                # # server_conn.connect((request.host, 443))
+                # server_conn.connect((request.headers['host'], (int)(request.port)))
+                # # newrequest = "GET "+url+" HTTP/1.1\r\n"+"Host: "+webserver+"\r\n"+"Connection: close\r\n"+"\r\n"
+
+                # print("request: ", r.decode())
+                # reply = "HTTP/1.1 200 Connection established\r\n"  # TODO probably shouldn't hardcode this
+                # reply += "Proxy-agent: Pyx\r\n"
+                # reply += "\r\n"
+                # client_conn.sendall(reply.encode())
+
+                # r = client_conn.recv(config['MAX_LEN'])
+                # print("r: ", r)
+
+                # server_conn.sendall(r)
+                
+                # resp = ""
+                # while (1) :
+                #     temp = server_conn.recv(config['MAX_LEN']).decode()
+                #     if (not temp):
+                #         break
+                #     resp += temp
+                # print("resp: ", resp)
+                # client_conn.sendall(resp.encode())
             
             server_conn.close()
             client_conn.close()
@@ -117,65 +162,6 @@ class Proxy :
                 server_conn.close()
             if client_conn:
                 client_conn.close()
-
-
-    # def _parse_request (request) :
-    #     first_line = request.split('\n')[0]
-    #     print("first line: ", first_line)
-    #     url = first_line.split(' ')[1]
-    #     print("url: ", url)
-
-    #     http_pos = url.find("://")
-    #     if (http_pos==-1):
-    #         temp = url
-    #     else:
-    #         temp = url[(http_pos+3):]
-
-    #     port_pos = temp.find(":") 
-
-    #     webserver_pos = temp.find("/")
-    #     if webserver_pos == -1:
-    #         webserver_pos = len(temp)
-
-    #     webserver = ""
-    #     port = -1
-    #     if (port_pos==-1 or webserver_pos < port_pos):      # default port
-    #         port = 80
-    #         webserver = temp[:webserver_pos]
-    #     else:                                               # specific port
-    #         port = int((temp[(port_pos+1):])[:webserver_pos-port_pos-1])
-    #         webserver = temp[:port_pos]
-
-    #     print("webserver: ", webserver)
-    #     print("port: ", port)
-
-    #     return webserver, port, url
-
-    # def start_thread(self, conn, client_addr) : 
-    #     request = conn.recv(config['MAX_LEN'])
-    #     print("request: ", request)
-    #     webserver, port, url = _parse_request(request)
-
-    #     try:
-    #         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #         s.settimeout(config['TIMEOUT'])
-    #         s.connect((webserver, port))
-    #         s.sendall(request)                           
-
-    #         while 1:
-    #             data = s.recv(config['MAX_LEN'])          # receive data from web server
-    #             if (len(data) > 0):
-    #                 conn.send(data)                               # send to browser
-    #             else:
-    #                 break
-    #         s.close()
-    #         conn.close()
-    #     except socket.error as error_msg:
-    #         print ("ERROR: ", client_addr, error_msg)
-    #         if s:
-    #             s.close()
-    #         if conn:
-    #             conn.close()
 
     def _get_name(self, cli_addr):
         return "Client"
