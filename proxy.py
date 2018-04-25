@@ -2,6 +2,7 @@ import socket
 import threading
 import signal
 import sys
+import contentfilter
 
 class Proxy :
     def __init__(self, config) :
