@@ -5,54 +5,25 @@ import sys
 import ssl
 import re
 import subprocess
+from http.server import BaseHTTPRequestHandler
+import io
 
 
 from cache import LFU_Cache
 
-resolv = {}
+class Request (BaseHTTPRequestHandler):
+    def __init__(self, request) :
+        self.rfile = io.BytesIO(request)
+        self.raw_requestline = self.rfile.readline()
+        self.error_code = self.error_message = None
+        self.parse_request()
 
-class Request :
-    def __init__(self, data) :
-        global resolv
-
-        first_line = data.split('\n')[0]                   
-
-        self.key_word = first_line.split(' ') [0]                    
-        self.url = first_line.split(' ') [1]                    
-
-        http_pos = self.url.find("://")          
-        if (http_pos==-1):
-            temp = self.url
-        else:
-            temp = self.url[(http_pos+3):]       
-        
-        port_pos = temp.find(":")           
-
-        webserver_pos = temp.find("/")
-        if webserver_pos == -1:
-            webserver_pos = len(temp)
-
-        self.host = ""
-        self.port = -1
-        if (port_pos==-1 or webserver_pos < port_pos):      
-            self.port = 80
-            self.host = temp[:webserver_pos]
-        else:                                               
-            self.port = int((temp[(port_pos+1):])[:webserver_pos-port_pos-1])
-            self.host = temp[:port_pos]
-
-        self.addr = None
-        if (self.host in resolv.keys()):
-            addr = resolv[self.host]
-        else:
-            tmp = subprocess.check_output(["nslookup", self.host])
-            tmp = tmp.decode()
-            results = tmp.split("\n")
-            for result in results:
-                match = re.match("^address:\t([^ ]+).*$", result.strip(), re.I)
-                if (match):
-                    self.addr = match.group(1).split("#")[0]
-            resolv[self.host] = self.addr
+        try:
+            self.port = self.headers['host'].split(":")[1]
+        except:
+            self.port = None
+        # self.client_address
+        # self.addr = self.address_string()
         
 
 
@@ -91,14 +62,16 @@ class Proxy :
 
         r = client_conn.recv(config['MAX_LEN'])        # get the request from browser
         
-        request = Request(r.decode())
+        request = Request(r)
 
         try : 
-            if (request.key_word == "GET") :
+            if (request.command == "GET") :
                 # create a socket to connect to the web server
+                if (request.port is None) :
+                    request.port = 80
                 server_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_conn.settimeout(config['TIMEOUT'])
-                server_conn.connect((request.host, request.port))
+                server_conn.connect((request.headers['host'], request.port))
                 server_conn.sendall(r)                           
 
                 while (1) :
@@ -108,15 +81,17 @@ class Proxy :
                     else:
                         break
        
-            elif (request.key_word == "CONNECT") : 
+            elif (request.command == "CONNECT") : 
+                if (request.port is None) :
+                    request.port = 443
                 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
                 context.verify_mode = ssl.CERT_NONE
                 context.check_hostname = False
 
-                server_conn = context.wrap_socket(socket.socket(socket.AF_INET), server_hostname=request.addr)
+                server_conn = context.wrap_socket(socket.socket(socket.AF_INET), server_hostname=request.address_string())
                 server_conn.settimeout(config['TIMEOUT'])
                 # server_conn.connect((request.host, 443))
-                server_conn.connect((request.host, request.port))
+                server_conn.connect((request.headers['host'], request.port))
                 # newrequest = "GET "+url+" HTTP/1.1\r\n"+"Host: "+webserver+"\r\n"+"Connection: close\r\n"+"\r\n"
                 # print("request: ", request)
 
@@ -226,6 +201,8 @@ if __name__ == "__main__":
     proxy = Proxy(config)
     proxy.listen()
 
+
+# https://github.com/dpallot/simple-websocket-server/blob/master/SimpleWebSocketServer/SimpleWebSocketServer.py#L26
 
 
 
