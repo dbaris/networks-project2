@@ -1,57 +1,133 @@
-# import Levenshtein
+import chardet
 
 class ContentFilter():
 	def __init__(self):
+		self.head = ""
 		self.current_page = ""
-		self.keywords = []
+		self.keywords = {}
+		self.firstMsg = True
+		self.found = False
+		self.inBody = False
+		self.pastBody = False
 
 	# Add popup to html page to ask for 
 	def addKeyword(self, word):
-		self.keywords.append(word.lower())
+		self.keywords[word.lower()] = "Low"
+
+	def _updateContentLength(self):
+		content_len = len(self.current_page)
+		h1, h2 = self.head.split("Content-Length: ")
+		h2 = "\n".join(h2.split("\n")[1:])
+
+		self.head = h1 + "Content-Length: " + str(content_len) + h2
 
 	def filterPage(self, html):
-		rating, found_keywords = self._rateHTML(html)
+		if self.firstMsg:
+			# print(html)
+			split_delim = html.split("\r\n\r\n")
+			self.head = split_delim[0] + "\r\n\r\n"
+			html = "\r\n\r\n".join(split_delim[1:])
+			self.firstMsg = False
 
-		if rating > 0:
-			newHtml = self._addBasicPopup(html, found_keywords)
-		else: 
-			newHtml = html
+		# print(html)
+		if self.pastBody:
+			# print("after bod")
+			return html
+		
+		# Filter body
+		if "<html" in html or self.inBody:
+			# print("in bod")
+			self.inBody = True
+			self._rateHTML(html)
+			self.current_page += html
 
-		# Final chunk
-		if "</html>" in html or html.endswith('\r\n\r\n'):
-			return newHtml
-		else:
-			# this might need to change
-			print("found a chunk")
-			self.current_page += filteredPage 
-			return None
+			if "</html>" in html:
+				self.inBody = False
+				self.current_page = self._addPopupHeader(self.current_page)
+				self._updateContentLength()
+				print(self.head)
+				return self.head + self.current_page
+			else:
+				return ""
+
+		return html
 
 
-	def _addBasicPopup(self, html, found_keywords):
+
+	# def _addPopupFooter(self, html):
+	# 	print("HI I AM HEREEEEEE IN POPUP FOOTER")
+	# 	kstring = ""
+	# 	keyword_results = self.keywords
+	# 	# print(html)
+	# 	for k in keyword_results.keys():
+	# 		if keyword_results[k] != "Low":
+	# 			if kstring != "":
+	# 				kstring += ", "
+	# 			kstring += keyword_results[k] + " risk of " + k
+
+	# 	if kstring == "":
+	# 		return html
+
+
+	# 	# print(html)
+	# 	split_on_head = html.split("</body>")
+	# 	head = split_on_head[0]
+	# 	body = "</head>".join(split_on_head[1:])
+	# 	alert = "<script>alert(\"Content Warning: " + kstring + "\")</script>"
+	# 	# print(body + alert + "</body>" + footer)
+	# 	return head + alert + "</head>" + body
+	
+	def _addPopupHeader(self, html):
+		print("HI I AM HEREEEEEE IN POPUP1")
 		kstring = ""
-		for k in found_keywords:
-			if kstring != "":
-				kstring += ", "
-			kstring += k
+		keyword_results = self.keywords
+		# print(html)
+		for k in keyword_results.keys():
+			if keyword_results[k] != "Low":
+				if kstring != "":
+					kstring += ", "
+				kstring += keyword_results[k] + " risk of " + k
 
-		head, body = html.split("</head>")
+		if kstring == "":
+			return html
+
+
+		# print(html)
+		split_on_head = html.split("<head>")
+		head = split_on_head[0]
+		body = "<head>".join(split_on_head[1:])
 		alert = "<script>alert(\"Content Warning: " + kstring + "\")</script>"
-		newHtml = head + alert + "</head>" + body
+		# print(body + alert + "</body>" + footer)
+		return head + "<head>" + alert + body
+
+	def _colorCodeKeywords(self, html, keyword_results):
+		newHtml = html
+		for k in keyword_results.keys():
+			updatedHTML = ""
+			if keyword_results[k] == "High":
+				# print(k)
+				split_on_k = newHtml.split(k)
+				i = 1
+				for instance in split_on_k:
+					updatedHTML += instance  
+					if i < len(split_on_k):
+						updatedHTML += "<span style=\"color:red\">" + k + "</span>"
+				newHtml = updatedHTML
 		return newHtml
 
 
 	# This algorithm needs to be better
 	def _rateHTML(self, html):
-		rating = 0
-		keywords = []
-		for k in self.keywords:
+		# print(self.keywords.keys())
+		for k in self.keywords.keys():
+			if (self.keywords[k] == "High"):
+				continue
 			for h in html.split(" "):
-				if self._levenshteinDistance(k, h.lower()) <= 3:
-					rating += 1
-					if k not in keywords:
-						keywords.append(k)
-
-		return (rating, keywords)
+				# print(h.lower())
+				if self._levenshteinDistance(k, h.lower()) <= 1:
+					self.keywords[k] = "High"
+				elif self._levenshteinDistance(k, h.lower()) <= 3:
+					self.keywords[k] = "Medium"
 
 	# Code from stackoverflow: 
 	# 	https://stackoverflow.com/questions/2460177/edit-distance-in-python
@@ -73,17 +149,17 @@ class ContentFilter():
 	    return distances[-1]
 
 
-def test():
-	c = ContentFilter()
-	c.addKeyword("ski")
-	c.addKeyword("race")
-	c.addKeyword("popcorn")
-	with open("testhtml.html", "r") as f:
-		html = f.read()
-		newHtml = c.filterPage(html)
+# def test():
+# 	c = ContentFilter()
+# 	c.addKeyword("ski")
+# 	c.addKeyword("mountains")
+# 	c.addKeyword("popcorn")
+# 	with open("testhtml.html", "r") as f:
+# 		html = f.read()
+# 		newHtml = c.filterPage(html)
 
-		with open("output.html", "w") as output:
-			output.write(newHtml)
+# 		with open("output.html", "w") as output:
+# 			output.write(newHtml)
 		
 		
-test()
+# test()
