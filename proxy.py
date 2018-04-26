@@ -49,13 +49,20 @@ class Proxy :
         first_line = request.split('\n')[0]                   # parse the first line
         print("first line: ", first_line)
 
+        if len(first_line.split(' ')) == 1:
+            # s.close()
+            conn.send("")
+            conn.close()
+            return
+
         url = first_line.split(' ')[1]                        # get url
         print("url: ", url)
 
         cacheData = cache.get(url)
         if cacheData is not None:
+            print("Found in cache!")
             conn.send(cacheData)
-            s.close()
+            # s.close()
             conn.close()
             return
 
@@ -89,7 +96,8 @@ class Proxy :
         filter = contentfilter.ContentFilter()
         filter.addKeyword("Indigenous")
         filter.addKeyword("Women")
-        filter.addKeyword("local councils")
+        filter.addKeyword("sexual misconduct")
+        filter.addKeyword("assault")
 
         try:
             # create a socket to connect to the web server
