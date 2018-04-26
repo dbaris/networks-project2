@@ -3,6 +3,7 @@ import threading
 import signal
 import sys
 import contentfilter
+import cache
 
 class Proxy :
     def __init__(self, config) :
@@ -51,6 +52,12 @@ class Proxy :
         url = first_line.split(' ')[1]                        # get url
         print("url: ", url)
 
+        cacheData = cache.get(url)
+        if cacheData is not None:
+            conn.send(cacheData)
+            s.close()
+            conn.close()
+            return
 
         # find the webserver and port
         http_pos = url.find("://")          # find pos of ://
@@ -82,7 +89,7 @@ class Proxy :
         filter = contentfilter.ContentFilter()
         filter.addKeyword("Indigenous")
         filter.addKeyword("Women")
-        filter.addKeyword("Assault")
+        filter.addKeyword("local councils")
 
         try:
             # create a socket to connect to the web server
@@ -99,6 +106,8 @@ class Proxy :
                     try:
                         data_filtered = filter.filterPage(data.decode())
                         conn.send(data_filtered.encode())
+                        if data_filtered != "":
+                            cache.add(url, data_filtered.encode())
                     except UnicodeDecodeError:
                         conn.send(data)                      # send to browser
                 else:
@@ -188,9 +197,9 @@ if __name__ == "__main__":
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
             "MAX_LEN" : 1024,
-            "TIMEOUT" : 5 
+            "TIMEOUT" : 10 
         }
-
+    cache = cache.LFU_Cache(100)
     proxy = Proxy(config)
     proxy.listen()
 
