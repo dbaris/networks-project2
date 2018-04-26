@@ -54,7 +54,7 @@ class ContentFilter():
             if keyword_results[k] != "Low":
                 if kstring != "":
                     kstring += ", "
-                kstring += keyword_results[k] + " risk of " + k
+                kstring += keyword_results[k] + " risk of keyword " + k
 
         if kstring == "":
             return html
