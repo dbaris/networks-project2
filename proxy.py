@@ -45,12 +45,12 @@ class Proxy :
     def listen(self) :
         while True:
             (cli_sock, cli_addr) = self.serverSocket.accept()
-            process = threading.Thread(name=self._get_name(cli_addr), target=self.start_thread, args=(cli_sock, cli_addr))
+            process = threading.Thread(name=self._get_name(cli_addr), target=self._start_thread, args=(cli_sock, cli_addr))
             process.setDaemon(True)
             process.start()
         self.shutdown(0,0)
 
-    def start_thread(self, client_conn, client_addr):
+    def _start_thread(self, client_conn, client_addr):
         r = client_conn.recv(config['MAX_LEN'])       
 
         request = Request(r)
@@ -79,7 +79,7 @@ class Proxy :
                 if (request.port is None) :
                     request.port = 80
 
-                server_conn = self.create_sock(request)
+                server_conn = self._create_sock(request)
                 server_conn.sendall(r)                           
 
                 while 1:
@@ -101,7 +101,7 @@ class Proxy :
                 if (request.port is None) :
                     request.port = 443
                 
-                server_conn = self.create_sock(request)
+                server_conn = self._create_sock(request)
 
                 conn_resp = "HTTP/1.1 200 Connection established\r\n"+"Proxy-agent: Pyx\r\n"+"\r\n"
                 client_conn.sendall(conn_resp.encode())
@@ -132,7 +132,7 @@ class Proxy :
                 client_conn.close()
 
 
-    def create_sock(self, request) :
+    def _create_sock(self, request) :
         conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         conn.settimeout(config['TIMEOUT'])
         conn.connect((request.host, (int)(request.port)))
