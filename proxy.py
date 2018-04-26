@@ -6,6 +6,7 @@ import contentfilter
 import cache
 from http.server import BaseHTTPRequestHandler
 import io
+import blocksite 
 
 
 class Request (BaseHTTPRequestHandler):
@@ -74,6 +75,13 @@ class Proxy :
         filter.addKeyword("sexual misconduct")
         filter.addKeyword("assault")
 
+        # Site Blocker
+        blocked_sites = SiteBlocker()
+        blocked_sites.block_site("www.facebook.com")
+
+        # if (host in blocked_sites) :
+        #     client_conn.send
+
         try : 
             if (request.command == "GET") :
                 if (request.port is None) :
@@ -87,10 +95,11 @@ class Proxy :
                     if (len(data) > 0):
                         # print("data : ", data.decode())
                         try:
-                            data_filtered = filter.filterPage(data.decode())
-                            client_conn.send(data_filtered.encode())
-                            if data_filtered != "":
-                                cache.add(request.path, data_filtered.encode())
+                            # data_filtered = filter.filterPage(data.decode())
+                            client_conn.send(data)                     # TODO only for testing
+                            # client_conn.send(data_filtered.encode())
+                            # if data_filtered != "":
+                            #     cache.add(request.path, data_filtered.encode())
                         except UnicodeDecodeError:
                             client_conn.send(data)                      # send to browser
                     else:
@@ -119,10 +128,11 @@ class Proxy :
                         client_conn.send(data)
                     else:
                         break
-
             
-            server_conn.close()
-            client_conn.close()
+            if server_conn:
+                server_conn.close()
+            if client_conn:
+                client_conn.close()
 
         except socket.error as error_msg:
             print ("ERROR: ",client_addr,error_msg)
