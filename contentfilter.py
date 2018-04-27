@@ -1,11 +1,20 @@
 class ContentFilter():
-    def __init__(self):
+    def __init__(self, config_file):
         self.head = ""
         self.current_page = ""
         self.keywords = {}
         self.firstMsg = True
         self.inBody = False
         self.pastBody = False
+
+        with open(config_file, "r") as fp:
+            for line in fp:
+                if line != "[ Keywords ]\n":
+                    self.addKeyword(line.replace("\n", ""))
+                if line == "[ Blocked ]\n":
+                    return
+        self.keywords.pop("")
+        # print(self.keywords)
 
     def addKeyword(self, word):
         self.keywords[word.lower()] = "Low"
@@ -38,7 +47,7 @@ class ContentFilter():
                 self.pastBody = True
                 self.current_page = self._addPopupHeader(self.current_page)
                 self._updateContentLength()
-                print(self.head)
+                # print(self.head)
                 return self.head + self.current_page
             else:
                 return ""
@@ -46,7 +55,6 @@ class ContentFilter():
         return html
 
     def _addPopupHeader(self, html):
-        print("HI I AM HEREEEEEE IN POPUP1")
         kstring = ""
         keyword_results = self.keywords
         # print(html)
@@ -78,13 +86,28 @@ class ContentFilter():
 
             for i in range(0, len(html_words) - k_len):
                 test = " ".join(html_words[i:i + k_len])
-                html_pieces.append(test)
+                html_pieces.append(test.lower())
 
             for h in html_pieces:
-                if self._levenshteinDistance(k, h.lower()) <= 1:
+                if len(h) == 0 or len(k) == 0:
+                    continue
+                if self._levenshteinDistance(k, h) <= 1:
                     self.keywords[k] = "High"
-                elif self._levenshteinDistance(k, h.lower()) <= 3:
+                elif (h[0] == k[0] and
+                      self._percentSim(k, h) > .75 and 
+                      self._levenshteinDistance(k, h) <= 3):
                     self.keywords[k] = "Medium"
+                    print("medium: %s, %s" % (k, h))
+
+    def _percentSim(self, s1, s2):
+        total = len(s1)
+        count = 0
+        for s in s1:
+            if s in s2:
+                count += 1
+
+        return count / total
+
 
     # Implementation of levenshtein distance from stackoverflow:
     #   https://stackoverflow.com/questions/2460177/edit-distance-in-python

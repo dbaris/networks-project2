@@ -44,6 +44,7 @@ class Proxy :
         self.__clients = {}
 
     def listen(self) :
+        print("Hello")
         while True:
             (cli_sock, cli_addr) = self.serverSocket.accept()
             process = threading.Thread(name=self._get_name(cli_addr), target=self._start_thread, args=(cli_sock, cli_addr))
@@ -68,20 +69,16 @@ class Proxy :
             client_conn.close()
             return
 
-        # Content filter - keywords should be automated
-        filter = contentfilter.ContentFilter()
-        filter.addKeyword("Indigenous")
-        filter.addKeyword("Women")
-        filter.addKeyword("sexual misconduct")
-        filter.addKeyword("assault")
-
         # Site Blocker
-        blocked_sites = SiteBlocker()
-        blocked_sites.block_site("www.facebook.com")
+        
 
-        # if (host in blocked_sites) :
-        #     client_conn.send
+        # blocked_sites.print()
 
+        print(request.host)
+        if blocked_sites.blocked(request.host):
+            client_conn.send(blocked_sites.not_allowed(request.host).encode())
+
+        server_conn = None
         try : 
             if (request.command == "GET") :
                 if (request.port is None) :
@@ -90,16 +87,19 @@ class Proxy :
                 server_conn = self._create_sock(request)
                 server_conn.sendall(r)                           
 
+                print("GET: " + request.path)
+                filter = contentfilter.ContentFilter("config")
+
                 while 1:
                     data = server_conn.recv(config['MAX_LEN'])         # receive data from web server
                     if (len(data) > 0):
                         # print("data : ", data.decode())
                         try:
-                            # data_filtered = filter.filterPage(data.decode())
-                            client_conn.send(data)                     # TODO only for testing
-                            # client_conn.send(data_filtered.encode())
-                            # if data_filtered != "":
-                            #     cache.add(request.path, data_filtered.encode())
+                            data_filtered = filter.filterPage(data.decode())
+                            # client_conn.send(data)                     # TODO only for testing
+                            client_conn.send(data_filtered.encode())
+                            if data_filtered != "":
+                                cache.add(request.path, data_filtered.encode())
                         except UnicodeDecodeError:
                             client_conn.send(data)                      # send to browser
                     else:
@@ -129,7 +129,7 @@ class Proxy :
                     else:
                         break
             
-            if server_conn:
+            if server_conn is not None:
                 server_conn.close()
             if client_conn:
                 client_conn.close()
@@ -155,7 +155,6 @@ class Proxy :
         self.serverSocket.close()
         sys.exit(0)
 
-
 if __name__ == "__main__":
     if len(sys.argv) != 2 :
         print("usage: ", sys.argv[0], "<port>");
@@ -165,8 +164,10 @@ if __name__ == "__main__":
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
             "MAX_LEN" : 1024,
-            "TIMEOUT" : 10 
+            "TIMEOUT" : 60 
         }
+
     cache = cache.LFU_Cache(100)
+    blocked_sites = blocksite.SiteBlocker("config")
     proxy = Proxy(config)
     proxy.listen()
