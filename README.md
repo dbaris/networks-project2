@@ -10,4 +10,4 @@ The network settings need to be updated so that HTTP traffic is routed through t
 
 ## Run
 
-python3 proxy.py <portno>
+python3 proxy.py < portno >
