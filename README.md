@@ -4,7 +4,7 @@ This HTTP proxy, when run on a local machine, implements content filtering and s
 
 ## Setup
 
-config - Both the sections of this file can be updated by the user to customize the proxy. The [ Keywords ] section has words that the proxy will add a popup for if it finds, and the [ Blocked ] section includes a list of urls to avoid. 
+config - Both the sections of this file can be updated by the user to customize the proxy. The [ Keywords ] section has words that the proxy will notify the user about if found, and the [ Blocked ] section includes a list of urls to avoid. 
 
 The network settings need to be updated so that HTTP traffic is routed through the proxy. Under the network settings for your machine, add an HTTP proxy routed through localhost. Choose whatever port number you will pass in when running the proxy.
 
