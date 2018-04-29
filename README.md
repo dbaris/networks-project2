@@ -8,6 +8,8 @@ config - Both the sections of this file can be updated by the user to customize 
 
 The network settings need to be updated so that HTTP traffic is routed through the proxy. Under the network settings for your machine, add an HTTP proxy routed through localhost. Choose whatever port number you will pass in when running the proxy.
 
+Popups must be enabled on the browser.
+
 ## Run
 
 python3 proxy.py < portno >

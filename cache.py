@@ -129,50 +129,50 @@ class LRU_Cache(Cache):
             self.keyQueue = newq
             self.rank += 1
 
-def test():
-    test_cap = 5
-    print("************ LRU CACHE TEST ************")
-    c = LRU_Cache(test_cap)
+# def test():
+#     test_cap = 5
+#     print("************ LRU CACHE TEST ************")
+#     c = LRU_Cache(test_cap)
 
-    for i in range(0, test_cap):
-        c.add(str(i), "<html>" + str(i) + "</html>")
-    c.print()
+#     for i in range(0, test_cap):
+#         c.add(str(i), "<html>" + str(i) + "</html>")
+#     c.print()
 
-    c.add(str(i + 1), "this should be at the back, cache should start @1")
-    c.print()
+#     c.add(str(i + 1), "this should be at the back, cache should start @1")
+#     c.print()
 
-    c.add(str(2), "<html>" + str(2) + "</html>")
-    c.print()
+#     c.add(str(2), "<html>" + str(2) + "</html>")
+#     c.print()
 
-    if (c.get("2") != "<html>2</html>"):
-        print("FAILED TEST")
-        return
+#     if (c.get("2") != "<html>2</html>"):
+#         print("FAILED TEST")
+#         return
 
-    c.clear()
-    c.print()
+#     c.clear()
+#     c.print()
 
-    if (c.get("2") != None):
-        print("FAILED TEST")
-        return
+#     if (c.get("2") != None):
+#         print("FAILED TEST")
+#         return
 
-    print("************ LFU CACHE TEST ************")
-    c2 = LFU_Cache(test_cap)
-    c2.print()
+#     print("************ LFU CACHE TEST ************")
+#     c2 = LFU_Cache(test_cap)
+#     c2.print()
 
 
-    for i in range(0, test_cap):
-        for j in range (0, i+1):
-            # print("Adding %d" %(i,))
-            c2.add(str(i), "<html>" + str(i) + "</html>")
+#     for i in range(0, test_cap):
+#         for j in range (0, i+1):
+#             # print("Adding %d" %(i,))
+#             c2.add(str(i), "<html>" + str(i) + "</html>")
 
-    c2.print()
+#     c2.print()
 
-    c2.add("5", "<html>5</html>");
-    c2.add("5", "<html>5</html>");
-    c2.add("5", "<html>5</html>");
-    c2.print()
+#     c2.add("5", "<html>5</html>");
+#     c2.add("5", "<html>5</html>");
+#     c2.add("5", "<html>5</html>");
+#     c2.print()
 
-    print("PASSED (...probably)")
+#     print("PASSED")
 
 
 # def main():

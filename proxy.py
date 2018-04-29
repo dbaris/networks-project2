@@ -60,10 +60,10 @@ class Proxy :
             client_conn.close()
             return
 
+        client_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
        
         cacheData = cache.get(request.path)
         if cacheData is not None:
-            print("Found in cache!")
             client_conn.send(cacheData)
             # s.close()
             client_conn.close()
@@ -71,11 +71,10 @@ class Proxy :
 
         # Site Blocker
         if blocked_sites.isBlocked(request.host):
-            print("sending blocked")
             client_conn.send(blocked_sites.not_allowed(request.host).encode())
+            return
 
         # blocked_sites.print()
-
         print(request.host)
         
 
@@ -86,31 +85,28 @@ class Proxy :
                     request.port = 80
 
                 server_conn = self._create_sock(request)
-                server_conn.sendall(r)                           
+                server_conn.sendall(r)                                           
 
                 print("GET: " + request.path)
                 filter = contentfilter.ContentFilter("config")
 
-                fst = True
                 while 1:
-                    # print("i think we're here")
+                    print("i think we're here")
                     data = server_conn.recv(config['MAX_LEN'])         # receive data from web server
-                    # print("stuck???")
+                    print("stuck???")
                     if (len(data) > 0):
-                        # if fst:
-                        #     print("data : ", data.decode())
-                        #     fst = False
+                        # print("data : ", data.decode())
                         try:
-                            # data_filtered = filter.filterPage(data.decode())
-                            if not blocked_sites.isBlocked(request.host):
-                                print("sending data")
-                                client_conn.send(data)                     # TODO only for testing
+                            data_filtered = filter.filterPage(data.decode())
+                            # client_conn.send(data)                     # TODO only for testing
 
-                            # client_conn.send(data_filtered.encode())
-                            # if data_filtered != "":
-                                # cache.add(request.path, data_filtered.encode())
+                            client_conn.send(data_filtered.encode())
+                            if data_filtered != "":
+                                cache.add(request.path, data_filtered.encode())
+                        
+                        # Forward any data that can't be decrypted
                         except UnicodeDecodeError:
-                            client_conn.send(data)                      # send to browser
+                            client_conn.send(data)                     
                     else:
                         break
        
@@ -172,7 +168,7 @@ if __name__ == "__main__":
     config =  {
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
-            "MAX_LEN" : 1024,
+            "MAX_LEN" : 1048576,
             "TIMEOUT" : 60 
         }
 

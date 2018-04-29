@@ -14,7 +14,6 @@ class ContentFilter():
                 if line == "[ Blocked ]\n":
                     return
         self.keywords.pop("")
-        # print(self.keywords)
 
     def addKeyword(self, word):
         self.keywords[word.lower()] = "Low"
@@ -30,14 +29,16 @@ class ContentFilter():
         self.head = h1 + "Content-Length: " + str(content_len) + h2
 
     def filterPage(self, html):
+        print("here")
+        if self.pastBody:
+            print("past")
+            return html
+        
         if self.firstMsg:
             split_delim = html.split("\r\n\r\n")
             self.head = split_delim[0] + "\r\n\r\n"
             html = "\r\n\r\n".join(split_delim[1:])
             self.firstMsg = False
-
-        if self.pastBody:
-            return html
 
         # Filter body
         if "<html" in html or self.inBody:
@@ -46,6 +47,7 @@ class ContentFilter():
             self.current_page += html
 
             if "</html>" in html:
+                print('hello??')
                 self.inBody = False
                 self.pastBody = True
                 self.current_page = self._addPopupHeader(self.current_page)
@@ -110,7 +112,6 @@ class ContentFilter():
                 count += 1
 
         return count / total
-
 
     # Implementation of levenshtein distance from stackoverflow:
     #   https://stackoverflow.com/questions/2460177/edit-distance-in-python
