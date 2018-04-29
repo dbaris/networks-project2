@@ -169,7 +169,7 @@ if __name__ == "__main__":
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
             "MAX_LEN" : 1048576,
-            "TIMEOUT" : 60 
+            "TIMEOUT" : 5 
         }
 
     cache = cache.LFU_Cache(100)
