@@ -29,9 +29,7 @@ class ContentFilter():
         self.head = h1 + "Content-Length: " + str(content_len) + h2
 
     def filterPage(self, html):
-        print("here")
         if self.pastBody:
-            print("past")
             return html
         
         if self.firstMsg:
@@ -47,7 +45,6 @@ class ContentFilter():
             self.current_page += html
 
             if "</html>" in html:
-                print('hello??')
                 self.inBody = False
                 self.pastBody = True
                 self.current_page = self._addPopupHeader(self.current_page)

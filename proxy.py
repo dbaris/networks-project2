@@ -64,10 +64,12 @@ class Proxy :
        
         cacheData = cache.get(request.path)
         if cacheData is not None:
+            print("in cache")
             client_conn.send(cacheData)
-            # s.close()
             client_conn.close()
             return
+
+        print("new page")
 
         # Site Blocker
         if blocked_sites.isBlocked(request.host):
@@ -91,9 +93,7 @@ class Proxy :
                 filter = contentfilter.ContentFilter("config")
 
                 while 1:
-                    print("i think we're here")
                     data = server_conn.recv(config['MAX_LEN'])         # receive data from web server
-                    print("stuck???")
                     if (len(data) > 0):
                         # print("data : ", data.decode())
                         try:
@@ -168,11 +168,11 @@ if __name__ == "__main__":
     config =  {
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
-            "MAX_LEN" : 1048576,
-            "TIMEOUT" : 5 
+            "MAX_LEN" : 4096,
+            "TIMEOUT" : 3 
         }
 
-    cache = cache.LFU_Cache(100)
+    cache = cache.LFU_Cache(1000)
     blocked_sites = blocksite.SiteBlocker("config")
     proxy = Proxy(config)
     proxy.listen()
