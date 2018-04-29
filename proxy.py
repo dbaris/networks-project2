@@ -2,11 +2,11 @@ import socket
 import threading
 import signal
 import sys
-import contentfilter
-import cache
 from http.server import BaseHTTPRequestHandler
 import io
 import blocksite 
+import contentfilter
+import cache
 
 
 class Request (BaseHTTPRequestHandler):
