@@ -70,13 +70,14 @@ class Proxy :
             return
 
         # Site Blocker
-        
+        if blocked_sites.isBlocked(request.host):
+            print("sending blocked")
+            client_conn.send(blocked_sites.not_allowed(request.host).encode())
 
         # blocked_sites.print()
 
         print(request.host)
-        if blocked_sites.blocked(request.host):
-            client_conn.send(blocked_sites.not_allowed(request.host).encode())
+        
 
         server_conn = None
         try : 
@@ -90,16 +91,24 @@ class Proxy :
                 print("GET: " + request.path)
                 filter = contentfilter.ContentFilter("config")
 
+                fst = True
                 while 1:
+                    # print("i think we're here")
                     data = server_conn.recv(config['MAX_LEN'])         # receive data from web server
+                    # print("stuck???")
                     if (len(data) > 0):
-                        # print("data : ", data.decode())
+                        # if fst:
+                        #     print("data : ", data.decode())
+                        #     fst = False
                         try:
-                            data_filtered = filter.filterPage(data.decode())
-                            # client_conn.send(data)                     # TODO only for testing
-                            client_conn.send(data_filtered.encode())
-                            if data_filtered != "":
-                                cache.add(request.path, data_filtered.encode())
+                            # data_filtered = filter.filterPage(data.decode())
+                            if not blocked_sites.isBlocked(request.host):
+                                print("sending data")
+                                client_conn.send(data)                     # TODO only for testing
+
+                            # client_conn.send(data_filtered.encode())
+                            # if data_filtered != "":
+                                # cache.add(request.path, data_filtered.encode())
                         except UnicodeDecodeError:
                             client_conn.send(data)                      # send to browser
                     else:

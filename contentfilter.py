@@ -21,7 +21,10 @@ class ContentFilter():
 
     def _updateContentLength(self):
         content_len = len(self.current_page)
-        h1, h2 = self.head.split("Content-Length: ")
+        split_on_head = self.head.split("Content-Length: ")
+        if len(split_on_head) == 1:
+            return
+        h1, h2 = split_on_head
         h2 = "\n".join(h2.split("\n")[1:])
 
         self.head = h1 + "Content-Length: " + str(content_len) + h2
@@ -127,22 +130,6 @@ class ContentFilter():
                                                distances_[-1])))
             distances = distances_
         return distances[-1]
-
-    # def _colorCodeKeywords(self, html, keyword_results):
-    #     newHtml = html
-    #     for k in keyword_results.keys():
-    #         updatedHTML = ""
-    #         if keyword_results[k] == "High":
-    #             # print(k)
-    #             split_on_k = newHtml.split(k)
-    #             i = 1
-    #             for instance in split_on_k:
-    #                 updatedHTML += instance
-    #                 if i < len(split_on_k):
-    #                     updatedHTML += "<span style=\"color:red\">" +
-    #                                     k + "</span>"
-    #             newHtml = updatedHTML
-    #     return newHtml
 
 
 # def test():
