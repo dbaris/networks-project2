@@ -56,6 +56,9 @@ class ContentFilter():
 
         return html
 
+    def cannotDecodeWarning(self):
+        return "<script>alert(\"Warning: Proxy unable to decode page content. Proceed at your own risk!\")</script>"
+
     def _addPopupHeader(self, html):
         kstring = ""
         keyword_results = self.keywords
@@ -99,7 +102,6 @@ class ContentFilter():
                       self._percentSim(k, h) > .75 and 
                       self._levenshteinDistance(k, h) <= 3):
                     self.keywords[k] = "Medium"
-                    print("medium: %s, %s" % (k, h))
 
     def _percentSim(self, s1, s2):
         total = len(s1)

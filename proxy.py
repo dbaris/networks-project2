@@ -78,6 +78,7 @@ class Proxy :
         
 
         server_conn = None
+        fst = True
         try : 
             if (request.command == "GET") :
                 if (request.port is None) :
@@ -86,7 +87,7 @@ class Proxy :
                 server_conn = self._create_sock(request)
                 server_conn.sendall(r)                                           
 
-                print("GET: " + request.path)
+                # print("GET: " + request.path)
                 filter = contentfilter.ContentFilter("config")
 
                 while 1:
@@ -94,6 +95,11 @@ class Proxy :
                     if (len(data) > 0):
                         # print("data : ", data.decode())
                         try:
+                            if ".css" in request.path:
+                                cache.add(request.path, data)
+                                client_conn.send(data)
+                                continue
+
                             data_filtered = filter.filterPage(data.decode())
                             # client_conn.send(data)                     # TODO only for testing
 
@@ -103,6 +109,10 @@ class Proxy :
                         
                         # Forward any data that can't be decrypted
                         except UnicodeDecodeError:
+                            print("unable to decode-- forwarding")
+                            if fst:
+                                client_conn.send(filter.cannotDecodeWarning().encode())
+                                fst = False
                             client_conn.send(data)                     
                     else:
                         break
