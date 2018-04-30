@@ -64,12 +64,9 @@ class Proxy :
        
         cacheData = cache.get(request.path)
         if cacheData is not None:
-            print("in cache")
             client_conn.send(cacheData)
             client_conn.close()
             return
-
-        print("new page")
 
         # Site Blocker
         if blocked_sites.isBlocked(request.host):
@@ -169,7 +166,7 @@ if __name__ == "__main__":
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
             "MAX_LEN" : 4096,
-            "TIMEOUT" : 3 
+            "TIMEOUT" : 1 
         }
 
     cache = cache.LFU_Cache(1000)
