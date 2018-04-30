@@ -74,11 +74,10 @@ class Proxy :
             return
 
         # blocked_sites.print()
-        print(request.host)
+        print("REQUESTED HOST: " + request.host)
         
 
         server_conn = None
-        fst = True
         try : 
             if (request.command == "GET") :
                 if (request.port is None) :
@@ -109,10 +108,7 @@ class Proxy :
                         
                         # Forward any data that can't be decrypted
                         except UnicodeDecodeError:
-                            print("unable to decode-- forwarding")
-                            if fst:
-                                client_conn.send(filter.cannotDecodeWarning().encode())
-                                fst = False
+                            print("Unable to decode: forwarding data")
                             client_conn.send(data)                     
                     else:
                         break
@@ -127,12 +123,12 @@ class Proxy :
                 conn_resp = "HTTP/1.1 200 Connection established\r\n"+"Proxy-agent: Pyx\r\n"+"\r\n"
                 client_conn.sendall(conn_resp.encode())
 
-                print("sent established connection")
+                # print("sent established connection")
                 
                 data = client_conn.recv(config['MAX_LEN'])         
                 server_conn.send(data)
                
-                print("data sent")
+                # print("data sent")
 
                 while (1) :
                     data = server_conn.recv(config['MAX_LEN'])         
