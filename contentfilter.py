@@ -1,11 +1,16 @@
+import gzip
+
 class ContentFilter():
     def __init__(self, config_file):
         self.head = ""
-        self.current_page = ""
+        self.current_page = b""
         self.keywords = {}
         self.firstMsg = True
         self.inBody = False
         self.pastBody = False
+        self.gzip = False
+        self.current_length = 0
+        self.totalLength = 0
 
         with open(config_file, "r") as fp:
             for line in fp:
@@ -19,50 +24,61 @@ class ContentFilter():
         self.keywords[word.lower()] = "Low"
 
     def _updateContentLength(self):
-        content_len = len(self.current_page)
-        split_on_head = self.head.split("Content-Length: ")
+        content_len = str(len(self.current_page))
+        split_on_head = self.head.split(b"Content-Length: ")
         if len(split_on_head) == 1:
             return
         h1, h2 = split_on_head
-        h2 = "\n".join(h2.split("\n")[1:])
+        h2 = b"\r\n" + b"\n".join(h2.split(b"\n")[1:])
 
-        self.head = h1 + "Content-Length: " + str(content_len) + h2
+        self.head = h1 + b"Content-Length: " + content_len.encode() + h2
 
-    def filterPage(self, html):
-        if self.pastBody:
-            return html
-        
+    def storeData(self, html):
         if self.firstMsg:
-            split_delim = html.split("\r\n\r\n")
-            self.head = split_delim[0] + "\r\n\r\n"
-            html = "\r\n\r\n".join(split_delim[1:])
+            split_delim = html.split(b"\r\n\r\n")
+            self.head = split_delim[0] + b"\r\n\r\n"
+            html = b"\r\n\r\n".join(split_delim[1:])
+            try:
+                self.totalLength = int(self.head.split(b"Content-Length: ")[1].split(b"\r\n")[0].decode())
+            except IndexError:
+                print(self.head)
             self.firstMsg = False
+            if b"gzip" in self.head:
+                self.gzip = True
+        self.current_page += html
+        self.current_length += len(html)
+        if self.current_length == self.totalLength:
+            return self.getFilteredData()
+        else:
+            return "".encode()
 
-        # Filter body
-        if "<html" in html or self.inBody:
-            self.inBody = True
-            self._rateHTML(html)
-            self.current_page += html
-
-            if "</html>" in html:
-                self.inBody = False
-                self.pastBody = True
-                self.current_page = self._addPopupHeader(self.current_page)
+    def getFilteredData(self):
+        try:
+            html_string = self.current_page.decode()
+            self._rateHTML(html_string)
+            html_with_popup = self._addPopupHeader(html_string)
+            self._updateContentLength()
+            return self.head + html_with_popup.encode()
+        except UnicodeDecodeError:
+            try:
+                html_string = gzip.decompress(self.current_page).decode()
+                self._rateHTML(html_string)
+                html_with_popup = self._addPopupHeader(html_string)
                 self._updateContentLength()
-                # print(self.head)
+                return self.head + gzip.compress(html_with_popup.encode())
+            except UnicodeDecodeError:
                 return self.head + self.current_page
-            else:
-                return ""
 
-        return html
-
-    def cannotDecodeWarning(self):
-        return "<script>alert(\"Warning: Proxy unable to decode page content. Proceed at your own risk!\")</script>"
+    def notGZIPPath(self, path):
+        skiptype = [".css", ".js", ".png", ".gif", ".aspx", ".jpg"]
+        for s in skiptype:
+            if s in path:
+                return True
+        return False
 
     def _addPopupHeader(self, html):
         kstring = ""
         keyword_results = self.keywords
-        # print(html)
         for k in keyword_results.keys():
             if keyword_results[k] != "Low":
                 if kstring != "":
@@ -76,7 +92,6 @@ class ContentFilter():
         head = split_on_head[0]
         body = "<head>".join(split_on_head[1:])
         alert = "<script>alert(\"Content Warning: " + kstring + "\")</script>"
-        # print(body + alert + "</body>" + footer)
         return head + "<head>" + alert + body
 
     def _rateHTML(self, html):

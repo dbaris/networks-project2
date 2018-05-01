@@ -7,7 +7,7 @@ import io
 import blocksite 
 import contentfilter
 import cache
-
+import gzip
 
 class Request (BaseHTTPRequestHandler):
     def __init__(self, request) :
@@ -76,8 +76,8 @@ class Proxy :
         # blocked_sites.print()
         print("REQUESTED HOST: " + request.host)
         
-
         server_conn = None
+        fst = True
         try : 
             if (request.command == "GET") :
                 if (request.port is None) :
@@ -92,24 +92,20 @@ class Proxy :
                 while 1:
                     data = server_conn.recv(config['MAX_LEN'])         # receive data from web server
                     if (len(data) > 0):
-                        # print("data : ", data.decode())
+                        if filter.notGZIPPath(request.path):
+                            client_conn.send(data)
+                            continue
                         try:
-                            if ".css" in request.path:
-                                cache.add(request.path, data)
-                                client_conn.send(data)
-                                continue
-
-                            data_filtered = filter.filterPage(data.decode())
-                            # client_conn.send(data)                     # TODO only for testing
-
-                            client_conn.send(data_filtered.encode())
-                            if data_filtered != "":
-                                cache.add(request.path, data_filtered.encode())
-                        
-                        # Forward any data that can't be decrypted
+                            data_filtered = filter.storeData(data)
+                            client_conn.send(data_filtered)
+                            if data_filtered != b"":
+                                cache.add(request.path, data_filtered)
                         except UnicodeDecodeError:
-                            print("Unable to decode: forwarding data")
-                            client_conn.send(data)                     
+                            client_conn.send(data)
+                        except OSError as e:
+                            if "Not a gzipped file" in str(e):
+                                client_conn.send(data)
+                                          
                     else:
                         break
        
@@ -143,7 +139,7 @@ class Proxy :
                 client_conn.close()
 
         except socket.error as error_msg:
-            print ("ERROR: ",client_addr,error_msg)
+            print ("ERROR: ",client_addr, error_msg)
             if server_conn:
                 server_conn.close()
             if client_conn:
@@ -172,7 +168,7 @@ if __name__ == "__main__":
             "HOST" : "0.0.0.0",
             "PORT" : int(sys.argv[1]),
             "MAX_LEN" : 4096,
-            "TIMEOUT" : 1 
+            "TIMEOUT" : 2 
         }
 
     cache = cache.LFU_Cache(1000)
